@@ -164,21 +164,21 @@ export default function LanguageProvider({ children }: LanguageProviderProps) {
 
   if (loadState === 'error') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-100">
-        <div className="w-full max-w-md rounded-2xl border border-red-500/15 bg-slate-900/70 p-8 text-center shadow-2xl">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-400">
+      <main className="paper-grid flex min-h-screen items-center justify-center bg-[#f1eee5] px-4 text-[#171713]">
+        <div className="w-full max-w-lg border-2 border-[#171713] bg-[#f8f5ec] p-7 shadow-[10px_10px_0_#ff4d00] sm:p-10">
+          <div className="mb-7 flex items-center justify-between border-b-2 border-[#171713] pb-4 font-mono text-[9px] font-black uppercase tracking-[0.16em]">
+            <span className="flex items-center gap-2"><Languages className="h-4 w-4" />Language service</span>
+            <span className="bg-[#ff4d00] px-2 py-1">Error 503</span>
+          </div>
+          <div className="mb-6 flex h-16 w-16 items-center justify-center border-2 border-[#171713] bg-[#171713] text-[#ff4d00]">
             <AlertCircle className="h-7 w-7" />
           </div>
-          <div className="mb-3 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            <Languages className="h-4 w-4" />
-            Language Service
-          </div>
-          <h1 className="text-xl font-bold text-white">{bootstrapCopy.title}</h1>
-          <p className="mt-3 text-sm leading-relaxed text-slate-400">{bootstrapCopy.description}</p>
+          <h1 className="display-type text-3xl font-black uppercase leading-none tracking-[-0.04em]">{bootstrapCopy.title}</h1>
+          <p className="mt-4 text-sm leading-relaxed text-[#65635c]">{bootstrapCopy.description}</p>
           <button
             type="button"
             onClick={() => void loadAllLanguages()}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.02]"
+            className="ink-button mt-7 px-5 py-3"
           >
             <RefreshCw className="h-4 w-4" />
             {bootstrapCopy.retry}

@@ -20,25 +20,28 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-0 top-0 h-[600px] w-[600px] rounded-full bg-emerald-500/5 blur-[150px]" />
-        <div className="absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-cyan-500/5 blur-[150px]" />
-      </div>
-
+    <div className="min-h-screen text-[#171713]">
       <NavBar current={page} onNavigate={navigate} />
 
-      <main>
+      <main className="pt-[4.5rem]">
         {page === 'home' && <HomePage />}
         {page === 'hobbies' && <HobbiesPage />}
         {page === 'architecture' && <ArchitecturePage />}
         {page === 'cv' && <CvPage />}
       </main>
 
-      <footer className="border-t border-white/5 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-sm text-slate-500 sm:flex-row sm:px-6">
-          <p>{i18n.language === 'es' ? 'Hecho con React, Vite, Tailwind e i18next' : 'Built with React, Vite, Tailwind & i18next'}</p>
-          <p>© {new Date().getFullYear()} Full Stack Dev</p>
+      <footer className="border-t-2 border-[#171713] bg-[#171713] py-10 text-[#f1eee5]">
+        <div className="mx-auto grid max-w-[90rem] gap-8 px-4 sm:px-6 md:grid-cols-[1fr_auto] md:items-end lg:px-8">
+          <div>
+            <div className="display-type text-5xl font-black tracking-[-0.07em]">JA<span className="text-[#ff4d00]">/</span></div>
+            <p className="mt-4 max-w-lg font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-[#aaa79d]">
+              {i18n.language === 'es' ? 'construido con React, Vite, Tailwind e i18next. Desplegado con AWS S3 y Cloudfront =)' : 'Designed as a systems notebook, built with React, Vite, Tailwind and i18next.'}
+            </p>
+          </div>
+          <div className="border-l border-[#5e5d57] pl-5 font-mono text-[10px] uppercase leading-6 tracking-[0.14em] text-[#aaa79d]">
+            <p>© {new Date().getFullYear()} Juan Diego Arévalo</p>
+            <p>Ecuador / UTC−5</p>
+          </div>
         </div>
       </footer>
     </div>

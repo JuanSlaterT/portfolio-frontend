@@ -30,8 +30,9 @@ export default function LanguageSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen((currentOpen) => !currentOpen)}
-        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        className="flex items-center gap-1.5 px-2 py-2 font-mono text-[10px] font-black uppercase tracking-[0.08em] text-[#171713] transition-colors hover:bg-[#d9ff43] sm:px-3"
         aria-label="Change language"
         aria-expanded={open}
       >
@@ -39,15 +40,16 @@ export default function LanguageSwitcher() {
         <span className="uppercase">{current}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-[100] mt-2 w-36 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-2xl backdrop-blur-xl">
+        <div className="absolute right-0 top-full z-[100] mt-3 w-40 border-2 border-[#171713] bg-[#f1eee5] shadow-[5px_5px_0_#171713]">
           {languages.map(({ code, label }) => (
             <button
               key={code}
+              type="button"
               onClick={() => change(code)}
-              className={`flex w-full items-center px-4 py-2.5 text-sm transition-colors ${
+              className={`flex w-full items-center border-b border-[#171713] px-4 py-3 font-mono text-[10px] font-black uppercase tracking-[0.08em] transition-colors last:border-b-0 ${
                 current === code
-                  ? 'bg-emerald-500/15 text-emerald-400'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                  ? 'bg-[#ff4d00] text-[#171713]'
+                  : 'text-[#171713] hover:bg-[#d9ff43]'
               }`}
             >
               <span className="uppercase">{label}</span>

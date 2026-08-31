@@ -18,12 +18,14 @@ function getBlockCopy() {
   return spanish
     ? {
         badge: 'Bloqueo temporal · HTTP 429',
+        title: 'Solicitud limitada',
         message: 'Has sido bloqueado temporalmente por hacer demasiadas peticiones.',
         countdown: 'Podrás volver a usar el sitio en',
         automatic: 'El acceso se restablecerá automáticamente cuando termine el contador.',
       }
     : {
         badge: 'Temporary block · HTTP 429',
+        title: 'Request throttled',
         message: 'You have been temporarily blocked for making too many requests.',
         countdown: 'You will be able to use the site again in',
         automatic: 'Access will be restored automatically when the countdown ends.',
@@ -67,45 +69,39 @@ export default function RateLimitProvider({ children }: RateLimitProviderProps) 
   const copy = getBlockCopy();
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-16 text-slate-100">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-red-500/10 blur-[130px]" />
-        <div className="absolute bottom-0 right-1/4 h-[300px] w-[300px] rounded-full bg-amber-500/5 blur-[110px]" />
-      </div>
-
+    <main className="paper-grid flex min-h-screen items-center justify-center bg-[#f1eee5] px-4 py-16 text-[#171713]">
       <section
         role="alert"
-        className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-red-500/15 bg-slate-900/80 p-6 text-center shadow-2xl shadow-red-950/20 backdrop-blur-xl sm:p-10"
+        className="w-full max-w-2xl border-2 border-[#171713] bg-[#f8f5ec] p-6 shadow-[12px_12px_0_#ff4d00] sm:p-10"
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-400/70 to-transparent" />
-
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-400">
-          <ShieldAlert className="h-8 w-8" />
+        <div className="mb-8 flex items-center justify-between gap-4 border-b-2 border-[#171713] pb-4 font-mono text-[9px] font-black uppercase tracking-[0.16em]">
+          <span>{copy.badge}</span>
+          <span className="bg-[#ff4d00] px-2 py-1">System guard</span>
         </div>
 
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-          {copy.badge}
-        </div>
-
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Oops, whoops!</h1>
-        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-400 sm:text-base">
-          {copy.message}
-        </p>
-
-        <div className="mx-auto mt-8 max-w-sm rounded-2xl border border-white/5 bg-slate-950/55 p-5 sm:p-6">
-          <div className="mb-3 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
-            <Clock3 className="h-4 w-4 text-amber-400" />
-            {copy.countdown}
+        <div className="grid gap-8 md:grid-cols-[1fr_0.8fr] md:items-end">
+          <div>
+            <div className="mb-7 flex h-16 w-16 items-center justify-center border-2 border-[#171713] bg-[#171713] text-[#ff4d00]">
+              <ShieldAlert className="h-8 w-8" />
+            </div>
+            <h1 className="display-type text-5xl font-black uppercase leading-[0.82] tracking-[-0.055em] sm:text-6xl">{copy.title}</h1>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-[#65635c] sm:text-base">{copy.message}</p>
           </div>
-          <time
-            dateTime={new Date(blockedUntil).toISOString()}
-            aria-live="polite"
-            className="block font-mono text-5xl font-bold tabular-nums tracking-tight text-white sm:text-6xl"
-          >
-            {formatCountdown(remainingSeconds)}
-          </time>
-          <p className="mt-4 text-xs leading-relaxed text-slate-500">{copy.automatic}</p>
+
+          <div className="border-2 border-[#171713] bg-[#d9ff43] p-5 sm:p-6">
+            <div className="mb-3 flex items-center gap-2 font-mono text-[9px] font-black uppercase tracking-[0.12em]">
+              <Clock3 className="h-4 w-4 text-[#2457ff]" />
+              {copy.countdown}
+            </div>
+            <time
+              dateTime={new Date(blockedUntil).toISOString()}
+              aria-live="polite"
+              className="display-type block text-6xl font-black tabular-nums tracking-[-0.06em]"
+            >
+              {formatCountdown(remainingSeconds)}
+            </time>
+            <p className="mt-4 border-t border-[#171713] pt-3 text-xs leading-relaxed text-[#55544e]">{copy.automatic}</p>
+          </div>
         </div>
       </section>
     </main>

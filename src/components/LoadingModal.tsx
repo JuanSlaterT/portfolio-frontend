@@ -23,24 +23,28 @@ export default function LoadingModal({ open, message }: LoadingModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#171713]/85 px-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-live="polite"
       aria-label={message}
     >
-      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 p-8 text-center shadow-2xl shadow-emerald-950/40">
-        <div className="pointer-events-none absolute -left-20 -top-20 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -right-20 h-44 w-44 rounded-full bg-cyan-500/10 blur-3xl" />
-
-        <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10">
-          <LoaderCircle className="h-9 w-9 animate-spin text-emerald-400" />
-          <Server className="absolute h-4 w-4 text-cyan-300" />
+      <div className="paper-grid relative w-full max-w-md border-2 border-[#171713] bg-[#f1eee5] p-6 text-[#171713] shadow-[10px_10px_0_#ff4d00] sm:p-8">
+        <div className="mb-7 flex items-center justify-between border-b-2 border-[#171713] pb-3 font-mono text-[9px] font-black uppercase tracking-[0.18em]">
+          <span>System request</span>
+          <span className="text-[#ff4d00]">In progress</span>
         </div>
 
-        <p className="relative text-lg font-semibold text-white">{message}</p>
-        <div className="relative mx-auto mt-5 h-1 w-28 overflow-hidden rounded-full bg-white/5">
-          <div className="h-full w-1/2 animate-[loading-slide_1.2s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
+        <div className="flex items-center gap-5">
+          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center border-2 border-[#171713] bg-[#171713] text-[#d9ff43]">
+            <LoaderCircle className="h-10 w-10 animate-spin" />
+            <Server className="absolute h-4 w-4 text-[#ff4d00]" />
+          </div>
+          <p className="display-type text-xl font-black uppercase leading-tight tracking-[-0.025em]">{message}</p>
+        </div>
+
+        <div className="mt-7 h-2 overflow-hidden border border-[#171713] bg-[#e5e0d4]">
+          <div className="h-full w-1/2 animate-[loading-slide_1.2s_steps(8)_infinite] bg-[#2457ff]" />
         </div>
       </div>
     </div>,

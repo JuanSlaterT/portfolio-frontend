@@ -12,6 +12,7 @@ import {
 import { portfolioApi } from '@/lib/api';
 import { getClientHash } from '@/lib/clientHash';
 import { useLoading } from '@/hooks/useLoading';
+import PageHeader from '@/components/layout/PageHeader';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -170,49 +171,70 @@ export default function CvPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-24 sm:px-6">
-      {/* Header */}
-      <div className="mb-12 text-center">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-4 py-1.5 text-sm text-amber-400">
-          <FileDown className="h-4 w-4" />
-          {t('nav.cv')}
-        </div>
-        <h1 className="text-4xl font-bold text-white sm:text-5xl">{t('cv.title')}</h1>
-        <p className="mt-3 text-slate-400">{t('cv.subtitle')}</p>
-        <div className="mx-auto mt-5 flex max-w-lg items-start gap-2.5 rounded-xl border border-cyan-500/15 bg-cyan-500/[0.05] px-4 py-3 text-left text-sm leading-relaxed text-cyan-100/80">
-          <Languages className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-          <span>{t('cv.languageNote')}</span>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[90rem] border-x border-[#171713] px-4 pb-24 sm:px-6 lg:px-8">
+      <PageHeader
+        index="04"
+        eyebrow={t('nav.cv')}
+        title={t('cv.title')}
+        description={t('cv.subtitle')}
+      >
+        <span className="inline-flex items-center gap-2 bg-[#2457ff] px-3 py-2 font-mono text-[10px] font-black uppercase tracking-[0.12em] text-white">
+          <Languages className="h-4 w-4" /> PDF / ES + EN
+        </span>
+      </PageHeader>
 
-      {/* Form Card */}
-      <div className="rounded-2xl border border-white/5 bg-gradient-to-br from-amber-500/5 to-emerald-500/5 p-6 sm:p-10">
-        {/* Success state */}
-        {status === 'success' && (
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
-              <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+      <section className="grid border-x-2 border-b-2 border-[#171713] lg:grid-cols-[0.72fr_1.28fr]">
+        <aside className="flex min-h-[34rem] flex-col justify-between bg-[#171713] p-6 text-[#f1eee5] sm:p-10">
+          <div>
+            <div className="flex items-center justify-between border-b border-[#5f5e58] pb-4 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#aaa79d]">
+              <span>Document request</span>
+              <span>REF. CV-04</span>
             </div>
-            <p className="max-w-sm text-lg text-slate-200">
+            <FileDown className="mt-10 h-16 w-16 text-[#d9ff43]" strokeWidth={1.4} />
+            <h2 className="display-type mt-8 text-5xl font-black uppercase leading-[0.85] tracking-[-0.05em]">
+              {t('cv.formTitle')}
+            </h2>
+          </div>
+
+          <div className="space-y-5">
+            <div className="border-l-4 border-[#2457ff] pl-4 text-sm leading-relaxed text-[#c9c5ba]">
+              {t('cv.languageNote')}
+            </div>
+            <p className="flex items-start gap-3 border-t border-[#5f5e58] pt-5 font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-[#aaa79d]">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#ff4d00]" />
+              {t('cv.privacyNote')}
+            </p>
+          </div>
+        </aside>
+
+        <div className="paper-grid flex min-h-[34rem] items-center bg-[#f8f5ec] p-6 sm:p-10 lg:p-14">
+        {status === 'success' && (
+          <div className="w-full border-2 border-[#171713] bg-[#d9ff43] p-8 shadow-[8px_8px_0_#171713] sm:p-12">
+            <div className="flex h-16 w-16 items-center justify-center border-2 border-[#171713] bg-[#171713] text-[#d9ff43]">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            <p className="display-type mt-8 max-w-xl text-3xl font-black uppercase leading-tight tracking-[-0.035em] text-[#171713]">
               {t(restoredRequest ? 'cv.alreadyRequested' : 'cv.success')}
             </p>
+            <div className="mt-8 border-t border-[#171713] pt-3 font-mono text-[9px] font-black uppercase tracking-[0.16em]">Request accepted / Status 202</div>
           </div>
         )}
 
-        {/* Form / idle / error */}
         {status !== 'success' && (
-          <>
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
-                <Mail className="h-5 w-5 text-amber-400" />
+          <div className="w-full">
+            <div className="mb-8 flex items-end justify-between gap-4 border-b-2 border-[#171713] pb-4">
+              <div>
+                <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[#ff4d00]">Delivery endpoint</p>
+                <h2 className="display-type mt-2 text-3xl font-black uppercase tracking-[-0.04em] text-[#171713]">{t('cv.formTitle')}</h2>
               </div>
-              <h2 className="text-xl font-bold text-white">{t('cv.formTitle')}</h2>
+              <Mail className="h-7 w-7 text-[#2457ff]" />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="cv-email" className="mb-2 block text-sm font-medium text-slate-300">
-                  {t('cv.emailLabel')}
+                <label htmlFor="cv-email" className="mb-2 flex items-center justify-between font-mono text-[10px] font-black uppercase tracking-[0.12em] text-[#171713]">
+                  <span>{t('cv.emailLabel')}</span>
+                  <span className="text-[#ff4d00]">Required *</span>
                 </label>
                 <input
                   id="cv-email"
@@ -225,14 +247,14 @@ export default function CvPage() {
                   }}
                   placeholder={t('cv.emailPlaceholder')}
                   disabled={status === 'submitting'}
-                  className={`w-full rounded-xl border bg-slate-900/50 px-4 py-3 text-slate-200 placeholder:text-slate-600 transition-colors focus:outline-none focus:ring-2 ${
+                  className={`w-full border-2 bg-[#f8f5ec] px-4 py-4 font-mono text-sm text-[#171713] placeholder:text-[#97948a] focus:outline-none disabled:opacity-50 ${
                     validationError || status === 'error'
-                      ? 'border-red-500/40 focus:border-red-500/60 focus:ring-red-500/20'
-                      : 'border-white/10 focus:border-amber-500/50 focus:ring-amber-500/20'
-                  } disabled:opacity-50`}
+                      ? 'border-[#ff4d00]'
+                      : 'border-[#171713] focus:bg-[#d9ff43]/30'
+                  }`}
                 />
                 {validationError && (
-                  <p className="mt-2 flex items-center gap-1.5 text-sm text-red-400">
+                  <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-[#b52e00]">
                     <AlertCircle className="h-4 w-4" />
                     {validationError}
                   </p>
@@ -240,19 +262,19 @@ export default function CvPage() {
               </div>
 
               {status === 'error' && (
-                <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+                <div className="flex items-center gap-2 border-2 border-[#171713] bg-[#ff4d00] px-4 py-3 text-sm font-semibold text-[#171713]">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {t('cv.error')}
                 </div>
               )}
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-sm text-slate-400 transition-colors hover:border-amber-500/20">
+              <label className="flex cursor-pointer items-start gap-3 border border-[#171713] bg-[#e5e0d4] px-4 py-4 text-sm text-[#55544e] transition-colors hover:bg-[#d9ff43]">
                 <input
                   type="checkbox"
                   checked={subscribeToUpdates}
                   onChange={(event) => setSubscribeToUpdates(event.target.checked)}
                   disabled={status === 'submitting'}
-                  className="mt-0.5 h-4 w-4 rounded border-white/20 bg-slate-900 accent-amber-500"
+                  className="mt-0.5 h-4 w-4 rounded-none border-[#171713] accent-[#ff4d00]"
                 />
                 <span>{t('cv.subscribeToUpdates')}</span>
               </label>
@@ -260,7 +282,7 @@ export default function CvPage() {
               <button
                 type="submit"
                 disabled={status === 'submitting' || !email.trim()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3.5 font-semibold text-slate-950 transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="ink-button w-full px-6 py-4 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {status === 'submitting' ? (
                   <>
@@ -275,14 +297,10 @@ export default function CvPage() {
                 )}
               </button>
             </form>
-
-            <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              {t('cv.privacyNote')}
-            </p>
-          </>
+          </div>
         )}
+        </div>
+      </section>
       </div>
-    </div>
   );
 }
