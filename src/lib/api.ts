@@ -16,11 +16,15 @@ function getApiBaseUrl() {
     throw new Error('VITE_API_BASE_URL must be a valid absolute URL');
   }
 
-  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
-    throw new Error('VITE_API_BASE_URL must use HTTP or HTTPS');
+  if (parsedUrl.protocol !== 'https:') {
+    throw new Error('VITE_API_BASE_URL must use HTTPS');
   }
 
-  return configuredUrl.replace(/\/+$/, '');
+  if (configuredUrl.endsWith('/')) {
+    throw new Error('VITE_API_BASE_URL must not end with a slash');
+  }
+
+  return configuredUrl;
 }
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -94,6 +98,14 @@ function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
 
 type RequestInitFactory = (visitorHeaders: Record<string, string>) => RequestInit;
 
+function buildApiUrl(path: string) {
+  if (!path.startsWith('/')) {
+    throw new Error('API request paths must start with a slash');
+  }
+
+  return `${API_BASE_URL}${path}`;
+}
+
 async function request<T>(
   path: string,
   initOrFactory: RequestInit | RequestInitFactory = {},
@@ -114,7 +126,7 @@ async function request<T>(
       headers.set(name, value);
     });
 
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(buildApiUrl(path), {
       ...init,
       headers,
     });

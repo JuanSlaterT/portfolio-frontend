@@ -150,7 +150,9 @@ The API base URL is injected by Vite through the required `VITE_API_BASE_URL` en
 VITE_API_BASE_URL=https://api.juancito.me/api
 ```
 
-[`src/lib/api.ts`](src/lib/api.ts) validates that the value is an absolute HTTP(S) URL and removes any trailing slash before appending endpoint paths.
+[`src/lib/api.ts`](src/lib/api.ts) validates that the value exists, is an absolute HTTPS URL, and does not end with `/`. Endpoint paths begin with exactly one slash, so the production value produces URLs such as `https://api.juancito.me/api/languages` without `//` or a duplicated `/api` segment.
+
+All `VITE_*` variables are compiled into the client bundle and are visible to anyone using the site. `VITE_API_BASE_URL` is public configuration and must be stored as a GitHub Actions Variable, never as a secret.
 
 | Method | Endpoint | Frontend use |
 | --- | --- | --- |
@@ -216,7 +218,7 @@ Reusable visual primitives such as `.ink-button`, `.outline-button`, `.technical
 - network access to the public BFF, or a compatible BFF configured through `VITE_API_BASE_URL`;
 - optional access to `api.ipify.org` for public IPv4 hashing. The UUID fallback keeps the site operational if it is unavailable.
 
-`VITE_API_BASE_URL` is required. Copy `.env.example` to the ignored local `.env` file, or define the variable in the build environment. Vite embeds the value at build time, so changing a runtime host variable after deployment does not modify an existing static bundle.
+`VITE_API_BASE_URL` is required. Copy `.env.example` to the ignored local `.env` file, or define the variable in the build environment. It must use HTTPS and must not have a trailing slash. Vite embeds the value at build time, so changing a runtime host variable after deployment does not modify an existing static bundle.
 
 ### Install and run
 
@@ -250,6 +252,7 @@ The test suite runs in jsdom and covers:
 
 - route/path mapping, direct links, History API navigation, and unknown-path canonicalization;
 - real navigation `href` values and client-side click handling;
+- required API environment configuration and exact endpoint construction;
 - IPv4 validation, hashing, legacy visitor upgrades, and offline fallback;
 - statistics-cache schema validation, tampering rejection, and TTL expiration;
 - rate-limit persistence and expiration.
@@ -270,10 +273,39 @@ Ensure `VITE_API_BASE_URL` is defined before `npm run build`; the production exa
 
 The production host must serve `index.html` for `/hobbies`, `/architecture`, `/resume`, and unknown application paths. On S3/CloudFront, configure the SPA fallback through the distribution/error-response or rewrite layer; otherwise a direct request to a nested route can return an object-store `404` before React starts.
 
+### Automated production deployment
+
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys automatically after a push to `main` and can also be started manually. The deploy job is guarded so only `refs/heads/main` can run it, declares the GitHub Environment `production`, and uses production concurrency with in-progress cancellation.
+
+The workflow performs `npm ci`, type checking, linting, and the production build before requesting AWS credentials. It then uses GitHub OIDC to assume the Terraform-managed IAM role through short-lived STS credentials. No AWS access key, secret key, long-lived token, Terraform command, or public S3 ACL is used.
+
+Configure these names as GitHub Actions Variables at repository level or in the `production` environment, not as Secrets:
+
+| Variable | Purpose |
+| --- | --- |
+| `AWS_ACCOUNT_ID` | Expected AWS account; enforced while configuring credentials. |
+| `AWS_REGION` | Region used by the AWS CLI and STS session. |
+| `AWS_ROLE_ARN` | Terraform-managed IAM role trusted through GitHub OIDC. |
+| `FRONTEND_BUCKET_NAME` | Private S3 bucket receiving `dist/`. |
+| `CLOUDFRONT_DISTRIBUTION_ID` | Distribution invalidated after a successful upload. |
+| `VITE_API_BASE_URL` | Public API base URL embedded into the browser bundle. Production value: `https://api.juancito.me/api`. |
+
+Obtain the deployment contract after applying the infrastructure repository:
+
+```bash
+terraform output -json frontend_deployment_contract
+```
+
+The workflow uploads hashed files from `dist/assets/` first with a one-year immutable cache policy. It then publishes the rest of `dist/` with `no-cache,no-store,must-revalidate`, and only afterward removes obsolete hashed assets. CloudFront paths `/` and `/index.html` are invalidated only if every synchronization succeeds. The S3 bucket remains private and visitors read objects exclusively through the Terraform-managed CloudFront Origin Access Control.
+
+The BFF must allow the production origin `https://juancito.me` in its CORS configuration. This is an external deployment prerequisite; this frontend repository does not modify the backend or AWS infrastructure.
+
 ## Repository structure
 
 ```text
 .
+├── .github/
+│   └── workflows/deploy.yml     # OIDC production deployment to S3/CloudFront
 ├── public/
 │   └── favicon.svg
 ├── src/

@@ -58,4 +58,15 @@ describe('portfolio API visitor metadata', () => {
     expect(JSON.stringify(body)).not.toContain('203.0.113.42');
     expect(window.localStorage.getItem('visitor-portfolio')).not.toContain('ipHash');
   });
+
+  it.each([
+    ['', 'Missing required environment variable: VITE_API_BASE_URL'],
+    ['not-a-url', 'VITE_API_BASE_URL must be a valid absolute URL'],
+    ['http://api.example.test/api', 'VITE_API_BASE_URL must use HTTPS'],
+    ['https://api.example.test/api/', 'VITE_API_BASE_URL must not end with a slash'],
+  ])('rejects invalid API configuration %j', async (configuredUrl, expectedMessage) => {
+    vi.stubEnv('VITE_API_BASE_URL', configuredUrl);
+
+    await expect(import('@/lib/api')).rejects.toThrow(expectedMessage);
+  });
 });

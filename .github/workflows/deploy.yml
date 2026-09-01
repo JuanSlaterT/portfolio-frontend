@@ -1,0 +1,157 @@
+name: Deploy frontend to production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: portfolio-frontend-production
+      cancel-in-progress: true
+
+    steps:
+      - name: Validate deployment variables
+        shell: bash
+        env:
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          required_variables=(
+            AWS_ACCOUNT_ID
+            AWS_REGION
+            AWS_ROLE_ARN
+            FRONTEND_BUCKET_NAME
+            CLOUDFRONT_DISTRIBUTION_ID
+            VITE_API_BASE_URL
+          )
+          missing_variables=()
+
+          for variable_name in "${required_variables[@]}"; do
+            if [[ -z "${!variable_name:-}" ]]; then
+              missing_variables+=("${variable_name}")
+            fi
+          done
+
+          if (( ${#missing_variables[@]} > 0 )); then
+            printf 'Missing required GitHub Actions variable: %s\n' "${missing_variables[@]}" >&2
+            exit 1
+          fi
+
+          if [[ ! "${AWS_ACCOUNT_ID}" =~ ^[0-9]{12}$ ]]; then
+            echo 'AWS_ACCOUNT_ID must contain exactly 12 digits.' >&2
+            exit 1
+          fi
+
+          if [[ "${VITE_API_BASE_URL}" != https://* || "${VITE_API_BASE_URL}" == */ ]]; then
+            echo 'VITE_API_BASE_URL must be an HTTPS URL without a trailing slash.' >&2
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+      - name: Verify production bundle
+        shell: bash
+        run: |
+          if [[ ! -f dist/index.html ]]; then
+            echo 'dist/index.html was not generated.' >&2
+            exit 1
+          fi
+
+          grep_status=0
+          grep -RIl --binary-files=text -- 'api-portfolio.zapto.org' dist/ > deprecated-api-files.txt || grep_status=$?
+
+          case "${grep_status}" in
+            0)
+              echo 'The production bundle contains the deprecated API hostname:' >&2
+              sed 's/^/  - /' deprecated-api-files.txt >&2
+              exit 1
+              ;;
+            1)
+              ;;
+            *)
+              echo 'The production bundle could not be inspected.' >&2
+              exit "${grep_status}"
+              ;;
+          esac
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          role-session-name: portfolio-frontend-${{ github.run_id }}
+
+      - name: Upload immutable assets
+        env:
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+        run: >-
+          aws s3 sync dist/assets/ "s3://${FRONTEND_BUCKET_NAME}/assets/"
+          --cache-control "public,max-age=31536000,immutable"
+          --only-show-errors
+
+      - name: Publish application shell
+        env:
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+        run: >-
+          aws s3 sync dist/ "s3://${FRONTEND_BUCKET_NAME}/"
+          --exclude "assets/*"
+          --delete
+          --cache-control "no-cache,no-store,must-revalidate"
+          --only-show-errors
+
+      - name: Remove obsolete immutable assets
+        env:
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+        run: >-
+          aws s3 sync dist/assets/ "s3://${FRONTEND_BUCKET_NAME}/assets/"
+          --delete
+          --cache-control "public,max-age=31536000,immutable"
+          --only-show-errors
+
+      - name: Invalidate CloudFront application shell
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: >-
+          aws cloudfront create-invalidation
+          --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}"
+          --paths "/" "/index.html"
