@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Home, Gamepad2, Network, FileDown } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-
-export type PageId = 'home' | 'hobbies' | 'architecture' | 'cv';
+import { getPathForPage, type PageId } from '@/lib/routes';
 
 interface NavBarProps {
   current: PageId;
@@ -16,15 +15,19 @@ export default function NavBar({ current, onNavigate }: NavBarProps) {
     { id: 'home', label: t('nav.home'), icon: Home, index: '01' },
     { id: 'hobbies', label: t('nav.hobbies'), icon: Gamepad2, index: '02' },
     { id: 'architecture', label: t('nav.architecture'), icon: Network, index: '03' },
-    { id: 'cv', label: t('nav.cv'), icon: FileDown, index: '04' },
+    { id: 'resume', label: t('nav.cv'), icon: FileDown, index: '04' },
   ];
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b-2 border-[#171713] bg-[#f1eee5]/95 backdrop-blur-sm">
       <div className="mx-auto flex h-[4.5rem] max-w-[90rem] items-stretch justify-between px-3 sm:px-5 lg:px-8">
-        <button
-          type="button"
-          onClick={() => onNavigate('home')}
+        <a
+          href={getPathForPage('home')}
+          onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            onNavigate('home');
+          }}
           className="group flex shrink-0 items-center border-x-2 border-[#171713] bg-[#171713] text-[#f1eee5]"
           aria-label={t('nav.home')}
         >
@@ -40,15 +43,19 @@ export default function NavBar({ current, onNavigate }: NavBarProps) {
               {t('brand.aspiration')}
             </span>
           </span>
-        </button>
+        </a>
 
         <div className="flex min-w-0 items-stretch">
           <div className="flex min-w-0 items-stretch">
             {items.map(({ id, label, icon: Icon, index }) => (
-              <button
+              <a
                 key={id}
-                type="button"
-                onClick={() => onNavigate(id)}
+                href={getPathForPage(id)}
+                onClick={(event) => {
+                  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  onNavigate(id);
+                }}
                 aria-current={current === id ? 'page' : undefined}
                 className={`group relative flex shrink-0 items-center gap-2 border-l border-[#171713] px-3 font-mono text-[10px] font-black uppercase tracking-[0.08em] transition-colors sm:px-4 lg:px-5 ${
                   current === id
@@ -61,7 +68,7 @@ export default function NavBar({ current, onNavigate }: NavBarProps) {
                 </span>
                 <Icon className="h-4 w-4 sm:hidden" strokeWidth={2.4} />
                 <span className="hidden sm:inline">{label}</span>
-              </button>
+              </a>
             ))}
           </div>
           <div className="flex shrink-0 items-center border-x border-[#171713] px-1 sm:px-2">

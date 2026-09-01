@@ -1,20 +1,52 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import NavBar, { type PageId } from '@/components/NavBar';
+import NavBar from '@/components/NavBar';
 import HomePage from '@/pages/HomePage';
 import HobbiesPage from '@/pages/HobbiesPage';
 import ArchitecturePage from '@/pages/ArchitecturePage';
 import CvPage from '@/pages/CvPage';
+import {
+  getPageFromPathname,
+  getPathForPage,
+  type PageId,
+} from '@/lib/routes';
+
+function getInitialPage(): PageId {
+  return getPageFromPathname(window.location.pathname) ?? 'home';
+}
 
 function App() {
   const { i18n } = useTranslation();
-  const [page, setPage] = useState<PageId>('home');
+  const [page, setPage] = useState<PageId>(getInitialPage);
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
 
+  useEffect(() => {
+    const syncPageWithUrl = () => {
+      const nextPage = getPageFromPathname(window.location.pathname);
+
+      if (nextPage) {
+        setPage(nextPage);
+        return;
+      }
+
+      window.history.replaceState({}, '', getPathForPage('home'));
+      setPage('home');
+    };
+
+    syncPageWithUrl();
+    window.addEventListener('popstate', syncPageWithUrl);
+    return () => window.removeEventListener('popstate', syncPageWithUrl);
+  }, []);
+
   function navigate(p: PageId) {
+    const nextPath = getPathForPage(p);
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({ page: p }, '', nextPath);
+    }
+
     setPage(p);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -27,7 +59,7 @@ function App() {
         {page === 'home' && <HomePage />}
         {page === 'hobbies' && <HobbiesPage />}
         {page === 'architecture' && <ArchitecturePage />}
-        {page === 'cv' && <CvPage />}
+        {page === 'resume' && <CvPage />}
       </main>
 
       <footer className="border-t-2 border-[#171713] bg-[#171713] py-10 text-[#f1eee5]">

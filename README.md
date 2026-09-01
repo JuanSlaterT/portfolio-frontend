@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=171713" alt="React 18" />
   <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.5" />
-  <img src="https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white" alt="Vite 5.4" />
+  <img src="https://img.shields.io/badge/Vite-7.3-646CFF?logo=vite&logoColor=white" alt="Vite 7.3" />
   <img src="https://img.shields.io/badge/Tailwind%20CSS-3.4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 3.4" />
   <img src="https://img.shields.io/badge/i18next-API--driven-26A69A?logo=i18next&logoColor=white" alt="i18next" />
 </p>
@@ -19,12 +19,14 @@ The application is the browser-facing client of the [Portfolio Backend (BFF)](ht
 ## Highlights
 
 - Responsive technical-editorial interface with four views: Home, Hobbies, Architecture, and Resume.
+- Direct links for `/`, `/hobbies`, `/architecture`, and `/resume`, including browser back/forward synchronization.
 - API-driven internationalization with automatic browser-language selection and a persistent language switcher.
 - Live League of Legends and VALORANT statistics with a five-minute browser cache.
 - Interactive architecture documentation for the BFF, microservices, AWS resources, and synchronous/asynchronous request paths.
 - Resume request form with validation, localized delivery, optional update subscription, and duplicate-request protection.
-- Stable per-browser visitor metadata attached to every API request.
+- Stable per-browser visitor metadata and a best-effort public IPv4 hash attached to every API request.
 - Global loading feedback, API error states, retry actions, and a persistent countdown for HTTP `429` blocks.
+- Automated unit and component tests for routing, navigation, visitor identity, caches, and rate-limit persistence.
 - Responsive layouts, keyboard focus indicators, semantic landmarks, and reduced mobile navigation.
 
 ## Role in the system
@@ -60,7 +62,7 @@ flowchart LR
 
 A typical browser request follows this path:
 
-1. The app creates or restores the visitor metadata stored by the browser.
+1. The app creates or restores the visitor metadata and, when required, attempts to resolve and hash the public IPv4 address through ipify.
 2. `src/lib/api.ts` adds the visitor headers and calls the public BFF.
 3. Nginx terminates TLS and forwards `/api` traffic to the BFF.
 4. The BFF validates the headers, applies its request limiter, and delegates to a private microservice.
@@ -69,14 +71,14 @@ A typical browser request follows this path:
 
 ## Pages
 
-| View | Purpose |
-| --- | --- |
-| **Home** | Hero, profile summary, technical skill matrix, selected repositories, social links, and contact information. |
-| **Hobbies** | Live League of Legends and VALORANT statistics plus a grid of personal interests. |
-| **Architecture** | System diagram, request flows, repository catalog, Terraform modules, and operational decisions. |
-| **Resume** | Email form that starts the asynchronous localized resume-delivery workflow. |
+| View | Route | Purpose |
+| --- | --- | --- |
+| **Home** | `/` | Hero, profile summary, technical skill matrix, selected repositories, social links, and contact information. |
+| **Hobbies** | `/hobbies` | Live League of Legends and VALORANT statistics plus a grid of personal interests. |
+| **Architecture** | `/architecture` | System diagram, request flows, repository catalog, Terraform modules, and operational decisions. |
+| **Resume** | `/resume` | Email form that starts the asynchronous localized resume-delivery workflow. |
 
-Navigation is controlled by application state in `App.tsx`; the project currently does not use a URL router. Refreshing the page therefore returns to the Home view.
+`App.tsx` uses the browser History API to initialize the active view from the pathname, push navigation entries, and react to `popstate`. Navigation items remain real links, so views can be copied, opened in another tab, refreshed, and traversed with the browser controls without adding a routing dependency.
 
 ## Frontend architecture
 
@@ -98,7 +100,7 @@ StrictMode
 | `RateLimitProvider` | Replaces the application with a global countdown while the visitor is blocked. |
 | `LoadingProvider` | Displays a portal-based modal while tracked API operations are running. |
 | `LanguageProvider` | Fetches the language catalog and all translation documents before rendering the site. |
-| `App` | Owns the current view and composes the shared navigation and footer. |
+| `App` | Synchronizes the current view with the URL and composes the shared navigation and footer. |
 | `portfolioApi` | Adds headers, parses the API envelope, translates failed responses into `ApiError`, and detects `429`. |
 
 ### Internationalization
@@ -120,21 +122,25 @@ Every non-preflight API request includes:
 | Header | Browser value |
 | --- | --- |
 | `x-visitorId` | Persistent UUID v4 generated in the browser. |
-| `x-ipHash` | SHA-256 of the visitor UUID, or a deterministic non-cryptographic fallback when Web Crypto is unavailable. It is not obtained from the visitor's network IP. |
+| `x-ipHash` | Best-effort SHA-256 of the public IPv4 returned by ipify. If lookup or Web Crypto fails, the app uses a deterministic hash of the visitor UUID. |
 | `x-userAgent` | Current `navigator.userAgent`. |
 | `x-lastSeenAt` | Current Unix timestamp in milliseconds. |
 
-The visitor record is stored under `visitor-portfolio`. If `localStorage` is unavailable, the app keeps a stable identity in memory for the current session.
+The lookup uses `https://api.ipify.org?format=json`, accepts IPv4 only, times out after 2.5 seconds, and is refreshed after 24 hours. The raw address is hashed in the browser and is never persisted or sent to the portfolio API. The visitor record is stored under `visitor-portfolio`; if `localStorage` is unavailable, the app keeps a stable identity in memory for the current session.
+
+The in-memory visitor object is frozen to prevent accidental mutation by application code. This is not a trust boundary: `x-ipHash` remains client-supplied and can be replaced by a modified browser or HTTP client.
 
 ### Browser persistence
 
 | Key | Purpose | Lifetime |
 | --- | --- | --- |
 | `portfolio-lang` | Selected language code. | Until manually cleared. |
-| `visitor-portfolio` | UUID, client hash, user agent, and last-seen timestamp. | Until manually cleared. |
+| `visitor-portfolio` | UUID, hash, hash source/resolution time, user agent, and last-seen timestamp. | The hash is refreshed after 24 hours. |
 | `portfolio:my-hobbies:stats:v1` | Last successful gaming-statistics response. | Five minutes. |
 | `portfolio:cv-request:v1` | Prevents an immediate duplicate resume request. | Ten minutes. |
 | `portfolio:rate-limit-until` | Restores the server-provided block deadline across refreshes and tabs. | Until the deadline expires. |
+
+Stored statistics, resume-request state, and rate-limit deadlines are schema-checked and time-checked before use; malformed or expired entries are discarded. `Object.freeze()` cannot make `localStorage` immutable because storage remains controlled by the visitor, so validation—not client-side immutability—is the relevant safety mechanism.
 
 ## Backend integration
 
@@ -180,12 +186,12 @@ Only `en` and `es` are currently sent by the resume form because the downstream 
 | --- | --- |
 | UI | React 18, React DOM |
 | Language | TypeScript 5.5 |
-| Build tooling | Vite 5.4 |
+| Build tooling | Vite 7.3 |
 | Styling | Tailwind CSS 3.4, PostCSS, custom CSS variables |
 | Internationalization | i18next, react-i18next |
 | Icons | Lucide React |
-| Quality | ESLint 9, TypeScript compiler |
-| Browser APIs | Fetch, Web Crypto, Local Storage, Intl |
+| Testing and quality | Vitest, Testing Library, jest-dom, jsdom, ESLint 9, TypeScript compiler |
+| Browser APIs | Fetch, History, Web Crypto, Local Storage, Intl |
 
 ## Design system
 
@@ -203,9 +209,10 @@ Reusable visual primitives such as `.ink-button`, `.outline-button`, `.technical
 
 ### Requirements
 
-- Node.js 18 or newer;
+- Node.js 20.19+ or 22.12+;
 - npm;
-- network access to the public BFF, or a compatible BFF configured in `src/lib/api.ts`.
+- network access to the public BFF, or a compatible BFF configured in `src/lib/api.ts`;
+- optional access to `api.ipify.org` for public IPv4 hashing. The UUID fallback keeps the site operational if it is unavailable.
 
 The repository does not currently require frontend environment variables. The checked-in `.env` is empty and ignored by Git.
 
@@ -228,24 +235,35 @@ The production BFF currently allows this origin through CORS. If the frontend ru
 | --- | --- |
 | `npm run dev` | Starts the Vite development server. |
 | `npm run build` | Creates the production bundle in `dist/`. |
+| `npm test` | Runs the automated suite once with Vitest. |
+| `npm run test:watch` | Runs Vitest in watch mode. |
 | `npm run typecheck` | Runs TypeScript without emitting files. |
 | `npm run lint` | Runs ESLint across the project. |
 | `npm run preview` | Serves the built bundle locally. |
 
-There is currently no automated frontend test suite configured.
+### Automated tests
+
+The test suite runs in jsdom and covers:
+
+- route/path mapping, direct links, History API navigation, and unknown-path canonicalization;
+- real navigation `href` values and client-side click handling;
+- IPv4 validation, hashing, legacy visitor upgrades, and offline fallback;
+- statistics-cache schema validation, tampering rejection, and TTL expiration;
+- rate-limit persistence and expiration.
 
 ## Production build
 
 ```bash
 npm ci
 npm run typecheck
+npm test
 npm run build
 npm run preview
 ```
 
 `dist/` is a static SPA bundle and can be deployed to an object store/CDN such as Amazon S3 and CloudFront. The frontend hosting workflow is separate from the BFF and microservice deployments.
 
-Because view selection is state-based and no URL router is used, the current build does not require server-side SPA rewrite rules for nested routes.
+The production host must serve `index.html` for `/hobbies`, `/architecture`, `/resume`, and unknown application paths. On S3/CloudFront, configure the SPA fallback through the distribution/error-response or rewrite layer; otherwise a direct request to a nested route can return an object-store `404` before React starts.
 
 ## Repository structure
 
@@ -269,8 +287,11 @@ Because view selection is state-based and no URL router is used, the current bui
 │   │   ├── api.ts               # BFF contract and request client
 │   │   ├── clientHash.ts
 │   │   ├── rateLimit.ts
+│   │   ├── routes.ts            # URL/page mapping
+│   │   ├── statsCache.ts        # Validated five-minute stats cache
 │   │   └── visitor.ts
 │   ├── pages/                   # Home, Hobbies, Architecture, and Resume
+│   ├── test/                    # Shared Vitest/Testing Library setup
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
@@ -289,20 +310,20 @@ Because view selection is state-based and no URL router is used, the current bui
 | [`portfolio-microservices-language_service`](https://github.com/JuanSlaterT/portfolio-microservices-language_service) | Translation catalog and documents stored in S3. |
 | [`portfolio-microservices-stats_service`](https://github.com/JuanSlaterT/portfolio-microservices-stats_service) | Aggregated OP.GG and HenrikDev gaming statistics. |
 | [`portfolio-microservices-resume_request_service`](https://github.com/JuanSlaterT/portfolio-microservices-resume_request_service) | Validates resume requests and publishes them to SQS. |
-| [`portfolio-consumer-resume_request`](https://github.com/JuanSlaterT/portfolio-consumer-resume_request) | Lambda consumer for persistence, notifications, and localized email delivery. |
+| [`portfolio-consumer-resume_request`](https://github.com/JuanSlaterT/portfolio-consumer-resume_request) | Lambda consumer for persistence, notifications, localized email delivery, and SQS partial-batch failure reporting. |
 | [`portfolio-arch-terraform`](https://github.com/JuanSlaterT/portfolio-arch-terraform) | AWS infrastructure, networking, runtime stack, observability, and deployments. |
 
 ## Current considerations
 
 - The language API is a startup dependency; without it, the main application does not render.
 - The public API URL is hard-coded rather than selected through a Vite environment variable.
-- Navigation state is not encoded in the URL, so views cannot currently be deep-linked.
+- Direct links require the static host/CDN to rewrite application paths to `index.html`.
 - Visitor metadata and rate limiting are abuse controls, not authentication or authorization.
-- The browser-generated `x-ipHash` is derived from the visitor UUID and must not be treated as a verified network-address hash.
+- Public IPv4 lookup is best-effort and introduces a request to ipify. Its hash remains client-supplied, can represent a shared NAT address, and must not be used as verified identity; the UUID hash is used when lookup fails.
 - Statistics availability depends on both external providers used by the stats service.
-- Resume acceptance confirms the asynchronous request was submitted; it does not guarantee that persistence and email delivery have already completed.
-- Browser caches are convenience controls and can be cleared or modified by the visitor.
-- No automated frontend tests are currently defined.
+- Resume acceptance confirms queue submission. The Lambda reports partial batch failures so SQS retries only failed records; after the configured redrive attempts, unresolved messages remain in the DLQ for investigation, replay, or manual email delivery.
+- Browser storage remains editable by the visitor. The application validates structure and expiration and safely rejects malformed values, but neither `Object.freeze()` nor frontend code can provide tamper-proof client storage.
+- The automated suite covers unit and jsdom component behavior; full browser end-to-end and visual regression tests are not yet configured.
 
 ## Author
 
