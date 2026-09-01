@@ -14,7 +14,7 @@ Responsive single-page portfolio for **Juan Diego Arévalo Bernal**. It presents
 
 The application is the browser-facing client of the [Portfolio Backend (BFF)](https://github.com/JuanSlaterT/portfolio-backend). Its content is not bundled as static translation files: the frontend discovers the available languages and downloads every translation document from the API during startup.
 
-> Public API: `https://api-portfolio.zapto.org/api`
+> Public API: `https://api.juancito.me/api`, configured through `VITE_API_BASE_URL`.
 
 ## Highlights
 
@@ -122,33 +122,35 @@ Every non-preflight API request includes:
 | Header | Browser value |
 | --- | --- |
 | `x-visitorId` | Persistent UUID v4 generated in the browser. |
-| `x-ipHash` | Best-effort SHA-256 of the public IPv4 returned by ipify. If lookup or Web Crypto fails, the app uses a deterministic hash of the visitor UUID. |
+| `x-ipHash` | Best-effort hash of the public IPv4 returned by ipify: SHA-256 through Web Crypto, with a deterministic fallback when unavailable. If the IPv4 lookup fails, the visitor UUID is hashed instead. |
 | `x-userAgent` | Current `navigator.userAgent`. |
 | `x-lastSeenAt` | Current Unix timestamp in milliseconds. |
 
-The lookup uses `https://api.ipify.org?format=json`, accepts IPv4 only, times out after 2.5 seconds, and is refreshed after 24 hours. The raw address is hashed in the browser and is never persisted or sent to the portfolio API. The visitor record is stored under `visitor-portfolio`; if `localStorage` is unavailable, the app keeps a stable identity in memory for the current session.
+Immediately before every portfolio API request, the client queries `https://api.ipify.org?format=json` with caching disabled, accepts IPv4 only, and stops waiting after 2.5 seconds. The returned address is hashed in memory for that request and is never persisted or sent raw to the portfolio API. Only the stable visitor UUID is stored under `visitor-portfolio`; if `localStorage` is unavailable, the app keeps that identity in memory for the current session.
 
-The in-memory visitor object is frozen to prevent accidental mutation by application code. This is not a trust boundary: `x-ipHash` remains client-supplied and can be replaced by a modified browser or HTTP client.
+The resume request reuses the same freshly generated hash in both its `x-ipHash` header and JSON body. This is not a trust boundary: `x-ipHash` remains client-supplied and can be replaced by a modified browser or HTTP client.
 
 ### Browser persistence
 
 | Key | Purpose | Lifetime |
 | --- | --- | --- |
 | `portfolio-lang` | Selected language code. | Until manually cleared. |
-| `visitor-portfolio` | UUID, hash, hash source/resolution time, user agent, and last-seen timestamp. | The hash is refreshed after 24 hours. |
+| `visitor-portfolio` | Stable visitor UUID only; no IPv4 address or IP hash is stored. | Until manually cleared. |
 | `portfolio:my-hobbies:stats:v1` | Last successful gaming-statistics response. | Five minutes. |
 | `portfolio:cv-request:v1` | Prevents an immediate duplicate resume request. | Ten minutes. |
 | `portfolio:rate-limit-until` | Restores the server-provided block deadline across refreshes and tabs. | Until the deadline expires. |
 
-Stored statistics, resume-request state, and rate-limit deadlines are schema-checked and time-checked before use; malformed or expired entries are discarded. `Object.freeze()` cannot make `localStorage` immutable because storage remains controlled by the visitor, so validation—not client-side immutability—is the relevant safety mechanism.
+Stored statistics, resume-request state, and rate-limit deadlines are schema-checked and time-checked before use; malformed or expired entries are discarded. Browser storage remains controlled by the visitor, so these values are convenience controls rather than trusted security state.
 
 ## Backend integration
 
-The API base URL is currently declared directly in [`src/lib/api.ts`](src/lib/api.ts):
+The API base URL is injected by Vite through the required `VITE_API_BASE_URL` environment variable. The default production example is provided in [`.env.example`](.env.example):
 
-```ts
-export const API_BASE_URL = 'https://api-portfolio.zapto.org/api';
+```dotenv
+VITE_API_BASE_URL=https://api.juancito.me/api
 ```
+
+[`src/lib/api.ts`](src/lib/api.ts) validates that the value is an absolute HTTP(S) URL and removes any trailing slash before appending endpoint paths.
 
 | Method | Endpoint | Frontend use |
 | --- | --- | --- |
@@ -211,10 +213,10 @@ Reusable visual primitives such as `.ink-button`, `.outline-button`, `.technical
 
 - Node.js 20.19+ or 22.12+;
 - npm;
-- network access to the public BFF, or a compatible BFF configured in `src/lib/api.ts`;
+- network access to the public BFF, or a compatible BFF configured through `VITE_API_BASE_URL`;
 - optional access to `api.ipify.org` for public IPv4 hashing. The UUID fallback keeps the site operational if it is unavailable.
 
-The repository does not currently require frontend environment variables. The checked-in `.env` is empty and ignored by Git.
+`VITE_API_BASE_URL` is required. Copy `.env.example` to the ignored local `.env` file, or define the variable in the build environment. Vite embeds the value at build time, so changing a runtime host variable after deployment does not modify an existing static bundle.
 
 ### Install and run
 
@@ -222,6 +224,7 @@ The repository does not currently require frontend environment variables. The ch
 git clone https://github.com/JuanSlaterT/portfolio-frontend.git
 cd portfolio-frontend
 npm install
+cp .env.example .env
 npm run dev
 ```
 
@@ -261,6 +264,8 @@ npm run build
 npm run preview
 ```
 
+Ensure `VITE_API_BASE_URL` is defined before `npm run build`; the production example targets `https://api.juancito.me/api`.
+
 `dist/` is a static SPA bundle and can be deployed to an object store/CDN such as Amazon S3 and CloudFront. The frontend hosting workflow is separate from the BFF and microservice deployments.
 
 The production host must serve `index.html` for `/hobbies`, `/architecture`, `/resume`, and unknown application paths. On S3/CloudFront, configure the SPA fallback through the distribution/error-response or rewrite layer; otherwise a direct request to a nested route can return an object-store `404` before React starts.
@@ -285,7 +290,6 @@ The production host must serve `index.html` for `/hobbies`, `/architecture`, `/r
 │   ├── i18n/                    # i18next initialization and preference storage
 │   ├── lib/
 │   │   ├── api.ts               # BFF contract and request client
-│   │   ├── clientHash.ts
 │   │   ├── rateLimit.ts
 │   │   ├── routes.ts            # URL/page mapping
 │   │   ├── statsCache.ts        # Validated five-minute stats cache
@@ -295,6 +299,7 @@ The production host must serve `index.html` for `/hobbies`, `/architecture`, `/r
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
+├── .env.example
 ├── index.html
 ├── package.json
 ├── tailwind.config.js

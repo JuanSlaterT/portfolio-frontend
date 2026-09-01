@@ -14,7 +14,7 @@ Portafolio responsive de una sola página para **Juan Diego Arévalo Bernal**. P
 
 La aplicación es el cliente web del [Portfolio Backend (BFF)](https://github.com/JuanSlaterT/portfolio-backend). Su contenido no se incluye como archivos estáticos de traducción: durante el arranque, el frontend descubre los idiomas disponibles y descarga desde la API todos sus documentos de traducción.
 
-> API pública: `https://api-portfolio.zapto.org/api`
+> API pública: `https://api.juancito.me/api`, configurada mediante `VITE_API_BASE_URL`.
 
 ## Características principales
 
@@ -122,33 +122,35 @@ Cada petición a la API que no sea preflight incluye:
 | Cabecera | Valor generado en el navegador |
 | --- | --- |
 | `x-visitorId` | UUID v4 persistente generado en el navegador. |
-| `x-ipHash` | SHA-256 best-effort de la IPv4 pública devuelta por ipify. Si la consulta o Web Crypto falla, se usa un hash determinista del UUID del visitante. |
+| `x-ipHash` | Hash best-effort de la IPv4 pública devuelta por ipify: SHA-256 mediante Web Crypto, con un fallback determinista si no está disponible. Si falla la consulta de IPv4, se hashea el UUID del visitante. |
 | `x-userAgent` | Valor actual de `navigator.userAgent`. |
 | `x-lastSeenAt` | Timestamp Unix actual en milisegundos. |
 
-La consulta usa `https://api.ipify.org?format=json`, acepta únicamente IPv4, expira después de 2,5 segundos y se renueva cada 24 horas. La dirección sin procesar se hashea en el navegador y nunca se persiste ni se envía a la API del portafolio. El registro se guarda bajo `visitor-portfolio`; si `localStorage` no está disponible, la aplicación mantiene una identidad estable en memoria durante la sesión actual.
+Inmediatamente antes de cada petición a la API del portafolio, el cliente consulta `https://api.ipify.org?format=json` con la caché deshabilitada, acepta únicamente IPv4 y deja de esperar después de 2,5 segundos. La dirección obtenida se hashea en memoria para esa petición y nunca se persiste ni se envía sin procesar a la API del portafolio. En `visitor-portfolio` solo se guarda el UUID estable del visitante; si `localStorage` no está disponible, la aplicación mantiene esa identidad en memoria durante la sesión actual.
 
-El objeto del visitante en memoria se congela para evitar mutaciones accidentales desde el código de la aplicación. Esto no es una frontera de confianza: `x-ipHash` continúa siendo un dato suministrado por el cliente y un navegador o cliente HTTP modificado puede reemplazarlo.
+La solicitud de CV reutiliza el mismo hash recién generado tanto en la cabecera `x-ipHash` como en el body JSON. Esto no es una frontera de confianza: `x-ipHash` continúa siendo un dato suministrado por el cliente y un navegador o cliente HTTP modificado puede reemplazarlo.
 
 ### Persistencia en el navegador
 
 | Clave | Propósito | Duración |
 | --- | --- | --- |
 | `portfolio-lang` | Código del idioma seleccionado. | Hasta eliminarla manualmente. |
-| `visitor-portfolio` | UUID, hash, origen/fecha de resolución, user agent y última actividad. | El hash se renueva después de 24 horas. |
+| `visitor-portfolio` | Solo el UUID estable del visitante; no se almacena la IPv4 ni su hash. | Hasta eliminarla manualmente. |
 | `portfolio:my-hobbies:stats:v1` | Última respuesta exitosa de estadísticas. | Cinco minutos. |
 | `portfolio:cv-request:v1` | Evita repetir inmediatamente una solicitud de CV. | Diez minutos. |
 | `portfolio:rate-limit-until` | Restaura entre recargas y pestañas el límite indicado por el servidor. | Hasta que expire el bloqueo. |
 
-Las estadísticas, el estado de solicitud de CV y los límites persistidos se validan por esquema y tiempo antes de usarse; los datos inválidos o expirados se descartan. `Object.freeze()` no puede volver inmutable a `localStorage`, porque el almacenamiento sigue bajo control del visitante: la validación, y no la inmutabilidad del cliente, es el mecanismo de seguridad relevante.
+Las estadísticas, el estado de solicitud de CV y los límites persistidos se validan por esquema y tiempo antes de usarse; los datos inválidos o expirados se descartan. El almacenamiento del navegador sigue bajo control del visitante, así que estos valores son controles de conveniencia y no estado de seguridad confiable.
 
 ## Integración con el backend
 
-La URL base se declara actualmente de forma directa en [`src/lib/api.ts`](src/lib/api.ts):
+Vite inyecta la URL base mediante la variable de entorno obligatoria `VITE_API_BASE_URL`. El ejemplo predeterminado de producción se encuentra en [`.env.example`](.env.example):
 
-```ts
-export const API_BASE_URL = 'https://api-portfolio.zapto.org/api';
+```dotenv
+VITE_API_BASE_URL=https://api.juancito.me/api
 ```
+
+[`src/lib/api.ts`](src/lib/api.ts) valida que el valor sea una URL HTTP(S) absoluta y elimina la barra final antes de añadir las rutas de los endpoints.
 
 | Método | Endpoint | Uso en el frontend |
 | --- | --- | --- |
@@ -211,10 +213,10 @@ Los primitivos visuales reutilizables `.ink-button`, `.outline-button`, `.techni
 
 - Node.js 20.19+ o 22.12+;
 - npm;
-- acceso de red al BFF público o un BFF compatible configurado en `src/lib/api.ts`;
+- acceso de red al BFF público o un BFF compatible configurado mediante `VITE_API_BASE_URL`;
 - acceso opcional a `api.ipify.org` para hashear la IPv4 pública. El fallback basado en UUID mantiene el sitio operativo si no está disponible.
 
-Actualmente el repositorio no requiere variables de entorno para el frontend. El archivo `.env` existente está vacío y Git lo ignora.
+`VITE_API_BASE_URL` es obligatoria. Copia `.env.example` al archivo local `.env`, ignorado por Git, o define la variable en el entorno de compilación. Vite incorpora el valor durante el build, por lo que cambiar una variable del host después del despliegue no modifica un bundle estático existente.
 
 ### Instalación y ejecución
 
@@ -222,6 +224,7 @@ Actualmente el repositorio no requiere variables de entorno para el frontend. El
 git clone https://github.com/JuanSlaterT/portfolio-frontend.git
 cd portfolio-frontend
 npm install
+cp .env.example .env
 npm run dev
 ```
 
@@ -261,6 +264,8 @@ npm run build
 npm run preview
 ```
 
+Asegúrate de definir `VITE_API_BASE_URL` antes de ejecutar `npm run build`; el ejemplo de producción apunta a `https://api.juancito.me/api`.
+
 `dist/` es un bundle estático y puede desplegarse en un object store/CDN como Amazon S3 y CloudFront. El alojamiento del frontend es independiente de los despliegues del BFF y los microservicios.
 
 El host de producción debe servir `index.html` para `/hobbies`, `/architecture`, `/resume` y las rutas desconocidas de la aplicación. En S3/CloudFront se debe configurar el fallback de SPA en la distribución/respuesta de error o capa de rewrite; de lo contrario, una petición directa a una ruta interna puede devolver un `404` del object store antes de que React se inicie.
@@ -285,7 +290,6 @@ El host de producción debe servir `index.html` para `/hobbies`, `/architecture`
 │   ├── i18n/                    # Inicialización de i18next y preferencia
 │   ├── lib/
 │   │   ├── api.ts               # Contrato y cliente del BFF
-│   │   ├── clientHash.ts
 │   │   ├── rateLimit.ts
 │   │   ├── routes.ts            # Asociación entre URL y página
 │   │   ├── statsCache.ts        # Caché validada de estadísticas
@@ -295,6 +299,7 @@ El host de producción debe servir `index.html` para `/hobbies`, `/architecture`
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
+├── .env.example
 ├── index.html
 ├── package.json
 ├── tailwind.config.js

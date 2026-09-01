@@ -1,7 +1,30 @@
 import { getVisitorRequestHeaders } from '@/lib/visitor';
 import { activateRateLimit } from '@/lib/rateLimit';
 
-export const API_BASE_URL = 'https://api-portfolio.zapto.org/api';
+function getApiBaseUrl() {
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (!configuredUrl) {
+    throw new Error('Missing required environment variable: VITE_API_BASE_URL');
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(configuredUrl);
+  } catch {
+    throw new Error('VITE_API_BASE_URL must be a valid absolute URL');
+  }
+
+  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+    throw new Error('VITE_API_BASE_URL must use HTTP or HTTPS');
+  }
+
+  return configuredUrl.replace(/\/+$/, '');
+}
+
+export const API_BASE_URL = getApiBaseUrl();
+export const API_HOSTNAME = new URL(API_BASE_URL).hostname;
 
 interface ApiEnvelope<T> {
   statusCode: number;
@@ -38,7 +61,6 @@ export interface GameStats {
 
 export interface ResumeRequest {
   email: string;
-  ipHash: string;
   language: 'en' | 'es';
   subscribeToUpdates: boolean;
 }
@@ -70,11 +92,19 @@ function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
   );
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+type RequestInitFactory = (visitorHeaders: Record<string, string>) => RequestInit;
+
+async function request<T>(
+  path: string,
+  initOrFactory: RequestInit | RequestInitFactory = {},
+): Promise<T> {
   let response: Response;
 
   try {
     const visitorHeaders = await getVisitorRequestHeaders();
+    const init = typeof initOrFactory === 'function'
+      ? initOrFactory(visitorHeaders)
+      : initOrFactory;
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
     if (init.body && !headers.has('Content-Type')) {
@@ -128,8 +158,11 @@ export const portfolioApi = {
   getStats: () => request<GameStats>('/stats', { cache: 'no-store' }),
 
   createResumeRequest: (resumeRequest: ResumeRequest) =>
-    request<ResumeRequestResult>('/resume-request', {
+    request<ResumeRequestResult>('/resume-request', (visitorHeaders) => ({
       method: 'POST',
-      body: JSON.stringify(resumeRequest),
-    }),
+      body: JSON.stringify({
+        ...resumeRequest,
+        ipHash: visitorHeaders['x-ipHash'],
+      }),
+    })),
 };

@@ -24,8 +24,10 @@ describe('visitor identity', () => {
     expect(normalizeIpv4({ ip: '203.0.113.42' })).toBeNull();
   });
 
-  it('hashes a public IPv4 without persisting or sending the raw address', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(ipResponse('203.0.113.42'));
+  it('resolves and hashes the public IPv4 again for every request', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(ipResponse('203.0.113.42'))
+      .mockResolvedValueOnce(ipResponse('198.51.100.7'));
     vi.stubGlobal('fetch', fetchMock);
     const { getVisitorRequestHeaders } = await import('@/lib/visitor');
 
@@ -33,12 +35,18 @@ describe('visitor identity', () => {
     const secondHeaders = await getVisitorRequestHeaders();
     const stored = JSON.parse(window.localStorage.getItem('visitor-portfolio') ?? '{}');
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api.ipify.org?format=json',
+      expect.objectContaining({ cache: 'no-store' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api.ipify.org?format=json',
+      expect.objectContaining({ cache: 'no-store' }));
     expect(firstHeaders['x-visitorId']).toMatch(UUID_V4_PATTERN);
-    expect(firstHeaders['x-ipHash']).toBe(secondHeaders['x-ipHash']);
+    expect(firstHeaders['x-visitorId']).toBe(secondHeaders['x-visitorId']);
+    expect(firstHeaders['x-ipHash']).not.toBe(secondHeaders['x-ipHash']);
     expect(firstHeaders['x-ipHash']).not.toContain('203.0.113.42');
-    expect(stored.ipHashSource).toBe('public-ipv4');
+    expect(stored).toEqual({ visitorId: firstHeaders['x-visitorId'] });
     expect(JSON.stringify(stored)).not.toContain('203.0.113.42');
+    expect(stored).not.toHaveProperty('ipHash');
   });
 
   it('falls back to hashing the visitor UUID when IPv4 lookup fails', async () => {
@@ -50,10 +58,10 @@ describe('visitor identity', () => {
 
     expect(headers['x-visitorId']).toMatch(UUID_V4_PATTERN);
     expect(headers['x-ipHash']).toBeTruthy();
-    expect(stored.ipHashSource).toBe('visitor-id');
+    expect(stored).toEqual({ visitorId: headers['x-visitorId'] });
   });
 
-  it('rejects an invalid lookup response and upgrades legacy stored visitors', async () => {
+  it('rejects an invalid lookup response and removes legacy hash data from storage', async () => {
     window.localStorage.setItem('visitor-portfolio', JSON.stringify({
       visitorId: '3d594650-3436-4f38-8d58-e91f0e1c43ed',
       ipHash: 'legacy-hash',
@@ -69,7 +77,8 @@ describe('visitor identity', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(headers['x-ipHash']).not.toBe('legacy-hash');
-    expect(stored.ipHashSource).toBe('visitor-id');
-    expect(stored.ipHashResolvedAt).toEqual(expect.any(Number));
+    expect(stored).toEqual({
+      visitorId: '3d594650-3436-4f38-8d58-e91f0e1c43ed',
+    });
   });
 });

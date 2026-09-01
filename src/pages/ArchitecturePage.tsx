@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '@/components/layout/PageHeader';
 import SectionHeading from '@/components/layout/SectionHeading';
+import { API_HOSTNAME } from '@/lib/api';
 
 type NodeVariant = 'paper' | 'signal' | 'blue' | 'acid' | 'ink';
 
@@ -147,7 +148,7 @@ export default function ArchitecturePage() {
             <span className="flex items-center gap-2 font-mono text-[9px] font-black uppercase tracking-[0.18em]">
               <Globe className="h-4 w-4 text-[#ff4d00]" /> {t('architecture.diagram.ingressLabel')}
             </span>
-            <span className="font-mono text-[9px] font-bold text-[#aaa79d]">api-portfolio.zapto.org / HTTPS</span>
+            <span className="font-mono text-[9px] font-bold text-[#aaa79d]">{API_HOSTNAME} / HTTPS</span>
           </div>
 
           <div className="p-4 sm:p-6 lg:p-8">

@@ -10,7 +10,6 @@ import {
   Languages,
 } from 'lucide-react';
 import { portfolioApi } from '@/lib/api';
-import { getClientHash } from '@/lib/clientHash';
 import { useLoading } from '@/hooks/useLoading';
 import PageHeader from '@/components/layout/PageHeader';
 
@@ -149,10 +148,8 @@ export default function CvPage() {
 
     try {
       await runWithLoading(async () => {
-        const ipHash = await getClientHash();
         return portfolioApi.createResumeRequest({
           email: trimmed,
-          ipHash,
           language: i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en',
           subscribeToUpdates,
         });

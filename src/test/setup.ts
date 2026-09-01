@@ -7,5 +7,6 @@ afterEach(() => {
   window.localStorage.clear();
   window.history.replaceState({}, '', '/');
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.useRealTimers();
 });
