@@ -4,6 +4,7 @@ import { initReactI18next } from 'react-i18next';
 export type AppLanguage = string;
 
 const STORAGE_KEY = 'portfolio-lang';
+export const DEFAULT_LANGUAGE: AppLanguage = 'en';
 
 function getStoredLanguage(): AppLanguage | null {
   try {
@@ -14,14 +15,9 @@ function getStoredLanguage(): AppLanguage | null {
   }
 }
 
-function getSystemLanguage(): AppLanguage {
-  const preferredLanguage = navigator.languages?.[0] ?? navigator.language;
-  return preferredLanguage.toLowerCase();
-}
-
 export function getPreferredLanguage(): AppLanguage {
-  if (typeof window === 'undefined') return 'en';
-  return getStoredLanguage() ?? getSystemLanguage();
+  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
+  return getStoredLanguage() ?? DEFAULT_LANGUAGE;
 }
 
 i18n.use(initReactI18next).init({
