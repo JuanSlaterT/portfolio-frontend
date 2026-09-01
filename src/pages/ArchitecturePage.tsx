@@ -88,6 +88,52 @@ type RepositoryCopy = {
   description: string;
 };
 
+type FrontendDeploymentCopy = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  browserTitle: string;
+  browserDescription: string;
+  domainDescription: string;
+  cloudFrontDescription: string;
+  originTitle: string;
+  originDescription: string;
+  certificateDescription: string;
+  oacDescription: string;
+  apiBridge: string;
+};
+
+const FRONTEND_DEPLOYMENT_COPY: Record<'en' | 'es', FrontendDeploymentCopy> = {
+  en: {
+    eyebrow: 'Frontend / AWS edge',
+    title: 'Frontend delivery',
+    description: 'The production SPA is stored in a private S3 origin and delivered globally by CloudFront through the custom domain.',
+    browserTitle: 'Visitor browser',
+    browserDescription: 'Requests the site over HTTPS and runs the React application returned by the CDN.',
+    domainDescription: 'The public hostname routes visitors to the CloudFront distribution.',
+    cloudFrontDescription: 'Terminates HTTPS at the edge, caches the Vite bundle, and serves SPA routes.',
+    originTitle: 'Private S3 origin',
+    originDescription: 'Stores the production bundle with public access blocked; it is not an S3 website.',
+    certificateDescription: 'The AWS-managed SSL/TLS certificate is attached to CloudFront and protects juancito.me at the edge.',
+    oacDescription: 'Origin Access Control signs origin requests; the bucket grants read access only to this distribution.',
+    apiBridge: 'Loaded React SPA calls the public API over HTTPS',
+  },
+  es: {
+    eyebrow: 'Frontend / borde de AWS',
+    title: 'Entrega del frontend',
+    description: 'La SPA de producción se almacena en un origen S3 privado y CloudFront la distribuye globalmente mediante el dominio personalizado.',
+    browserTitle: 'Navegador del visitante',
+    browserDescription: 'Solicita el sitio por HTTPS y ejecuta la aplicación React entregada por la CDN.',
+    domainDescription: 'El hostname público dirige a los visitantes hacia la distribución de CloudFront.',
+    cloudFrontDescription: 'Termina HTTPS en el borde, almacena en caché el bundle de Vite y sirve las rutas de la SPA.',
+    originTitle: 'Origen S3 privado',
+    originDescription: 'Almacena el bundle de producción con el acceso público bloqueado; no es un sitio web de S3.',
+    certificateDescription: 'El certificado SSL/TLS administrado por AWS se asocia a CloudFront y protege juancito.me en el borde.',
+    oacDescription: 'Origin Access Control firma las solicitudes al origen; el bucket solo permite lectura a esta distribución.',
+    apiBridge: 'La SPA de React cargada consume la API pública mediante HTTPS',
+  },
+};
+
 type Repository = {
   id: string;
   url: string;
@@ -153,6 +199,7 @@ export default function ArchitecturePage() {
   const repositoryCopyLanguage = i18n.resolvedLanguage?.toLowerCase().startsWith('es')
     ? 'es'
     : 'en';
+  const frontendDeploymentCopy = FRONTEND_DEPLOYMENT_COPY[repositoryCopyLanguage];
 
   const getRepositoryText = (
     repository: Repository,
@@ -162,6 +209,11 @@ export default function ArchitecturePage() {
     repository.fallbackCopy
       ? { defaultValue: repository.fallbackCopy[repositoryCopyLanguage][field] }
       : undefined,
+  );
+
+  const getFrontendDeploymentText = (field: keyof FrontendDeploymentCopy) => t(
+    `architecture.frontendDeployment.${field}`,
+    { defaultValue: frontendDeploymentCopy[field] },
   );
 
   return (
@@ -194,10 +246,54 @@ export default function ArchitecturePage() {
             <span className="flex items-center gap-2 font-mono text-[9px] font-black uppercase tracking-[0.18em]">
               <Globe className="h-4 w-4 text-[#ff4d00]" /> {t('architecture.diagram.ingressLabel')}
             </span>
-            <span className="font-mono text-[9px] font-bold text-[#aaa79d]">{API_HOSTNAME} / HTTPS</span>
+            <span className="font-mono text-[9px] font-bold text-[#aaa79d]">juancito.me → {API_HOSTNAME} / HTTPS</span>
           </div>
 
           <div className="p-4 sm:p-6 lg:p-8">
+            <div className="border-2 border-[#171713] bg-[#f8f5ec] shadow-[5px_5px_0_#ff4d00]">
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#171713] bg-[#d9ff43] px-4 py-4 sm:px-5">
+                <div className="max-w-3xl">
+                  <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[#65635c]">{getFrontendDeploymentText('eyebrow')}</p>
+                  <h3 className="display-type mt-2 text-2xl font-black uppercase tracking-[-0.035em] sm:text-3xl">{getFrontendDeploymentText('title')}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#55544e]">{getFrontendDeploymentText('description')}</p>
+                </div>
+                <a href="https://juancito.me" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border-2 border-[#171713] bg-[#171713] px-3 py-2 font-mono text-[9px] font-black uppercase tracking-[0.08em] text-[#f1eee5] transition-transform hover:-translate-y-0.5">
+                  https://juancito.me <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+
+              <div className="p-4 sm:p-5">
+                <div className="grid items-stretch lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr]">
+                  <DiagramNode icon={Monitor} title={getFrontendDeploymentText('browserTitle')} subtitle={getFrontendDeploymentText('browserDescription')} variant="blue" />
+                  <FlowArrow label="HTTPS" />
+                  <DiagramNode icon={Globe} title="juancito.me" subtitle={getFrontendDeploymentText('domainDescription')} meta="public domain" variant="acid" />
+                  <FlowArrow label="DNS alias" />
+                  <DiagramNode icon={Cloud} title="Amazon CloudFront" subtitle={getFrontendDeploymentText('cloudFrontDescription')} meta="CDN / edge" variant="signal" />
+                  <FlowArrow label="OAC / SigV4" />
+                  <DiagramNode icon={Box} title={getFrontendDeploymentText('originTitle')} subtitle={getFrontendDeploymentText('originDescription')} meta="public access off" variant="ink" />
+                </div>
+
+                <div className="mt-4 grid border-2 border-[#171713] sm:grid-cols-2">
+                  <article className="flex gap-3 p-4">
+                    <Lock className="h-5 w-5 shrink-0 text-[#2457ff]" />
+                    <div>
+                      <h4 className="font-mono text-[10px] font-black uppercase tracking-[0.1em]">AWS Certificate Manager</h4>
+                      <p className="mt-2 text-xs leading-relaxed text-[#65635c]">{getFrontendDeploymentText('certificateDescription')}</p>
+                    </div>
+                  </article>
+                  <article className="flex gap-3 border-t-2 border-[#171713] p-4 sm:border-l-2 sm:border-t-0">
+                    <ShieldCheck className="h-5 w-5 shrink-0 text-[#ff4d00]" />
+                    <div>
+                      <h4 className="font-mono text-[10px] font-black uppercase tracking-[0.1em]">CloudFront OAC</h4>
+                      <p className="mt-2 text-xs leading-relaxed text-[#65635c]">{getFrontendDeploymentText('oacDescription')}</p>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+
+            <DownConnector label={getFrontendDeploymentText('apiBridge')} />
+
             <div className="grid items-stretch lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
               <DiagramNode icon={Globe} title={t('architecture.diagram.client.title')} subtitle={t('architecture.diagram.client.description')} variant="blue" />
               <FlowArrow label="HTTPS" />

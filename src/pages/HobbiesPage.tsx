@@ -90,6 +90,8 @@ function GamingPanel({
   errorText,
   notConfiguredText,
   loadButtonText,
+  providerLabel,
+  providerName,
   children,
 }: {
   title: string;
@@ -102,17 +104,26 @@ function GamingPanel({
   errorText: string;
   notConfiguredText: string;
   loadButtonText: string;
+  providerLabel: string;
+  providerName: string;
   children: React.ReactNode;
 }) {
   return (
     <article className="flex h-full flex-col border-2 border-[#171713] bg-[#f8f5ec] shadow-[6px_6px_0_#171713]">
-      <div className="flex items-center gap-3 border-b-2 border-[#171713] bg-[#171713] p-4 text-[#f1eee5] sm:px-6">
+      <div className="flex flex-wrap items-center gap-3 border-b-2 border-[#171713] bg-[#171713] p-4 text-[#f1eee5] sm:px-6">
         <div className={`flex h-10 w-10 items-center justify-center ${accentColor}`}>
           <Icon className="h-5 w-5" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-[#aaa79d]">Live data sheet</p>
           <h3 className="display-type text-xl font-black uppercase tracking-[-0.02em]">{title}</h3>
+        </div>
+        <div
+          className="ml-auto border border-[#77756d] px-3 py-2 text-right"
+          aria-label={`${providerLabel}: ${providerName}`}
+        >
+          <p className="font-mono text-[7px] font-bold uppercase tracking-[0.16em] text-[#aaa79d]">{providerLabel}</p>
+          <p className="mt-0.5 font-mono text-[10px] font-black uppercase tracking-[0.08em] text-[#d9ff43]">{providerName}</p>
         </div>
       </div>
 
@@ -166,6 +177,10 @@ function GamingPanel({
 export default function HobbiesPage() {
   const { t, i18n } = useTranslation();
   const { runWithLoading } = useLoading();
+  const isSpanish = (i18n.resolvedLanguage ?? i18n.language).toLowerCase().startsWith('es');
+  const providerLabel = t('hobbies.gaming.sourceLabel', {
+    defaultValue: isSpanish ? 'Fuente de datos' : 'Data source',
+  });
   const [initialStats] = useState<GameStats | null>(() => readCachedStats());
   const [statsState, setStatsState] = useState<LoadState>(
     initialStats ? 'success' : 'idle',
@@ -229,6 +244,8 @@ export default function HobbiesPage() {
             errorText={t('hobbies.gaming.lol.error')}
             notConfiguredText={t('hobbies.gaming.lol.notConfigured')}
             loadButtonText={t('hobbies.gaming.lol.loadMore')}
+            providerLabel={providerLabel}
+            providerName={t('hobbies.gaming.lol.provider', { defaultValue: 'OP.GG' })}
           >
             {stats && (
               <>
@@ -256,6 +273,8 @@ export default function HobbiesPage() {
             errorText={t('hobbies.gaming.valorant.error')}
             notConfiguredText={t('hobbies.gaming.valorant.notConfigured')}
             loadButtonText={t('hobbies.gaming.valorant.loadMore')}
+            providerLabel={providerLabel}
+            providerName={t('hobbies.gaming.valorant.provider', { defaultValue: 'HenrikDev' })}
           >
             {stats && (
               <>
