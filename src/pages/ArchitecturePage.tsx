@@ -15,6 +15,7 @@ import {
   Globe,
   Lock,
   Mail,
+  Monitor,
   Network,
   Server,
   ShieldCheck,
@@ -81,7 +82,39 @@ function DownConnector({ label }: { label?: string }) {
   );
 }
 
-const REPOSITORIES: Array<{ id: string; url: string; icon: LucideIcon; tags: string[] }> = [
+type RepositoryCopy = {
+  role: string;
+  name: string;
+  description: string;
+};
+
+type Repository = {
+  id: string;
+  url: string;
+  icon: LucideIcon;
+  tags: string[];
+  fallbackCopy?: Record<'en' | 'es', RepositoryCopy>;
+};
+
+const REPOSITORIES: Repository[] = [
+  {
+    id: 'frontend',
+    url: 'https://github.com/JuanSlaterT/portfolio-frontend',
+    icon: Monitor,
+    tags: ['React 18', 'TypeScript', 'Vite 7', 'Tailwind CSS', 'CloudFront'],
+    fallbackCopy: {
+      en: {
+        role: 'Web experience',
+        name: 'Portfolio Frontend',
+        description: 'Browser client with API-driven localization, URL-addressable views, visitor metadata, automated tests, and OIDC deployment to private S3 and CloudFront.',
+      },
+      es: {
+        role: 'Experiencia web',
+        name: 'Frontend del portafolio',
+        description: 'Cliente web con traducciones servidas por API, vistas navegables por URL, metadatos de visitante, pruebas automatizadas y despliegue OIDC hacia S3 privado y CloudFront.',
+      },
+    },
+  },
   { id: 'terraform', url: 'https://github.com/JuanSlaterT/portfolio-arch-terraform', icon: GitBranch, tags: ['Terraform', 'AWS', 'HCL', 'SSM', 'GitHub OIDC'] },
   { id: 'bff', url: 'https://github.com/JuanSlaterT/portfolio-backend', icon: Network, tags: ['Java 21', 'Spring Boot', 'Gateway MVC', 'Docker'] },
   { id: 'language', url: 'https://github.com/JuanSlaterT/portfolio-microservices-language_service', icon: Globe, tags: ['Java 21', 'Spring Boot', 'AWS SDK v2', 'Amazon S3'] },
@@ -116,7 +149,20 @@ const SYNC_STEPS = ['client', 'nginx', 'bff', 'service', 'provider', 'response']
 const ASYNC_STEPS = ['request', 'producer', 'queue', 'worker', 'persist', 'notify', 'deliver', 'retry'];
 
 export default function ArchitecturePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const repositoryCopyLanguage = i18n.resolvedLanguage?.toLowerCase().startsWith('es')
+    ? 'es'
+    : 'en';
+
+  const getRepositoryText = (
+    repository: Repository,
+    field: keyof RepositoryCopy,
+  ) => t(
+    `architecture.repositories.items.${repository.id}.${field}`,
+    repository.fallbackCopy
+      ? { defaultValue: repository.fallbackCopy[repositoryCopyLanguage][field] }
+      : undefined,
+  );
 
   return (
     <div className="mx-auto max-w-[90rem] border-x border-[#171713] px-4 pb-24 sm:px-6 lg:px-8">
@@ -269,9 +315,9 @@ export default function ArchitecturePage() {
                   <span className="display-type text-6xl font-black tracking-[-0.08em] text-[#d0cbc0]">{String(index + 1).padStart(2, '0')}</span>
                   <Icon className="h-7 w-7" />
                 </div>
-                <p className="mt-6 font-mono text-[9px] font-black uppercase tracking-[0.16em] text-[#ff4d00]">{t(`architecture.repositories.items.${repository.id}.role`)}</p>
-                <h3 className="display-type mt-2 break-words text-2xl font-black uppercase leading-none tracking-[-0.03em]">{t(`architecture.repositories.items.${repository.id}.name`)}</h3>
-                <p className="mt-4 flex-1 text-sm leading-relaxed text-[#65635c]">{t(`architecture.repositories.items.${repository.id}.description`)}</p>
+                <p className="mt-6 font-mono text-[9px] font-black uppercase tracking-[0.16em] text-[#ff4d00]">{getRepositoryText(repository, 'role')}</p>
+                <h3 className="display-type mt-2 break-words text-2xl font-black uppercase leading-none tracking-[-0.03em]">{getRepositoryText(repository, 'name')}</h3>
+                <p className="mt-4 flex-1 text-sm leading-relaxed text-[#65635c]">{getRepositoryText(repository, 'description')}</p>
                 <div className="mt-5 flex flex-wrap gap-1.5">
                   {repository.tags.map((tag) => <span key={tag} className="technical-tag text-[#55544e]">{tag}</span>)}
                 </div>
